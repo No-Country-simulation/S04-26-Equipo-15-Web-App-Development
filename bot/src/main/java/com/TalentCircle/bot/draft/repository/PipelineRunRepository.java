@@ -1,5 +1,5 @@
 package com.TalentCircle.bot.draft.repository;
 
-public interface DraftRepository {
-    
+public interface PipelineRunRepository {
+
 }
