@@ -2,18 +2,23 @@ package com.TalentCircle.bot.review;
 
 import com.TalentCircle.bot.Entity.DraftChannel;
 import com.TalentCircle.bot.Entity.DraftStatus;
+import com.TalentCircle.bot.publisher.DraftExportService;
 import com.TalentCircle.bot.review.dto.DraftResponse;
 import com.TalentCircle.bot.review.dto.DraftUpdateResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -24,22 +29,33 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(DraftController.class)
+@ExtendWith(MockitoExtension.class)
 class DraftControllerTest {
 
-    @Autowired
+    @Mock
+    private DraftService draftService;
+
+    @Mock
+    private DraftExportService draftExportService;
+
     private MockMvc mockMvc;
 
-    @MockitoBean
-    private DraftService draftService;
+    @BeforeEach
+    void setUp() {
+        DraftController controller = new DraftController(draftService, draftExportService);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setMessageConverters(
+                        new StringHttpMessageConverter(),
+                        new MappingJackson2HttpMessageConverter(new ObjectMapper()))
+                .build();
+    }
 
     // US-019 -------------------------------------------------------------------
 
     @Test
     void GET_api_drafts_returns200_groupedByChannel() throws Exception {
         DraftResponse dto = new DraftResponse(
-                1L, DraftChannel.NEWSLETTER, DraftStatus.PENDING_REVIEW,
-                "preview texto", LocalDateTime.now());
+                1L, DraftChannel.NEWSLETTER, DraftStatus.PENDING_REVIEW, "preview texto", null);
 
         when(draftService.listByStatus(DraftStatus.PENDING_REVIEW))
                 .thenReturn(Map.of(DraftChannel.NEWSLETTER, List.of(dto)));
@@ -64,8 +80,7 @@ class DraftControllerTest {
     @Test
     void PUT_api_drafts_id_returns200_withUpdatedDraft() throws Exception {
         DraftUpdateResponse dto = new DraftUpdateResponse(
-                1L, DraftChannel.NEWSLETTER, DraftStatus.EDITED,
-                "Contenido editado", LocalDateTime.now());
+                1L, DraftChannel.NEWSLETTER, DraftStatus.EDITED, "Contenido editado", null);
 
         when(draftService.editDraft(eq(1L), any())).thenReturn(dto);
 

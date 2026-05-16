@@ -51,7 +51,7 @@ public class DraftController {
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(draftExportService.exportAsJson(id));
             case "markdown" -> ResponseEntity.ok()
-                    .contentType(MediaType.TEXT_PLAIN)
+                    .contentType(new MediaType(MediaType.TEXT_PLAIN, java.nio.charset.StandardCharsets.UTF_8))
                     .body(draftExportService.exportAsMarkdown(id));
             default -> ResponseEntity.badRequest()
                     .body("Unsupported format '" + format + "'. Use 'json' or 'markdown'.");

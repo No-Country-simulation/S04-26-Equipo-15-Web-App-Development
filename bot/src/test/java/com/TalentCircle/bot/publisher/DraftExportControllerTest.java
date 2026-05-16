@@ -5,39 +5,52 @@ import com.TalentCircle.bot.Entity.DraftStatus;
 import com.TalentCircle.bot.publisher.dto.DraftExportResponse;
 import com.TalentCircle.bot.review.DraftController;
 import com.TalentCircle.bot.review.DraftService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.converter.StringHttpMessageConverter;
 
-import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(DraftController.class)
+@ExtendWith(MockitoExtension.class)
 class DraftExportControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockitoBean
+    @Mock
     private DraftService draftService;
 
-    @MockitoBean
+    @Mock
     private DraftExportService draftExportService;
+
+    private MockMvc mockMvc;
+
+    @BeforeEach
+    void setUp() {
+        DraftController controller = new DraftController(draftService, draftExportService);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setMessageConverters(
+                        new StringHttpMessageConverter(StandardCharsets.UTF_8),
+                        new MappingJackson2HttpMessageConverter(new ObjectMapper()))
+                .build();
+    }
 
     // US-023 -------------------------------------------------------------------
 
     @Test
     void GET_export_json_returns200_withJsonBody() throws Exception {
         DraftExportResponse response = new DraftExportResponse(
-                1L, DraftChannel.NEWSLETTER, DraftStatus.APPROVED,
-                "Contenido aprobado", LocalDateTime.now());
+                1L, DraftChannel.NEWSLETTER, DraftStatus.APPROVED, "Contenido aprobado", null);
 
         when(draftExportService.exportAsJson(1L)).thenReturn(response);
 
