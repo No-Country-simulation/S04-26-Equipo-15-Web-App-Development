@@ -1,7 +1,5 @@
 package com.TalentCircle.bot.ai.service;
 
-import java.util.List;
-
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 
@@ -12,44 +10,50 @@ public class SummaryService {
 
     private final ChatClient chatClient;
 
-    public SummaryService(ChatClient chatClient) {
-        this.chatClient = chatClient;
+    public SummaryService(ChatClient.Builder chatClientBuilder) {
+        this.chatClient = chatClientBuilder.build();
     }
 
     public ContributionSummaryDTO generateSummary(
-            ContributionSummaryDTO contribution
+            WeeklyActivityDTO activity
     ) {
 
         String prompt = """
-                You are an editorial assistant for TalentCircle.
-
-                Generate a concise summary in a maximum of 3 sentences.
+                Summarize the following contribution in a maximum of 3 sentences.
 
                 Include:
                 - Main topic
-                - Why it matters for TalentCircle
-                - Original source link
-                """;
+                - Why it is relevant for TalentCircle
+                - Original link
 
-        String response = chatClient.prompt()
+                Contribution:
+                Title: %s
+                Source: %s
+                Community: %s
+                Author: %s
+                Score: %d
+                Content: %s
+                Link: %s
+                """
+                .formatted(
+                        activity.getTitle(),
+                        activity.getSource(),
+                        activity.getCommunity(),
+                        activity.getAuthor(),
+                        activity.getScore(),
+                        activity.getContent(),
+                        activity.getUrl()
+                );
+
+        String summary = chatClient.prompt()
                 .user(prompt)
                 .call()
                 .content();
 
         return new ContributionSummaryDTO(
-                contribution.title(),
-                response,
-                contribution.originalUrl()
+                activity.getTitle(),
+                summary,
+                activity.getUrl()
         );
-    }
-
-    public List<ContributionSummaryDTO> generateWeeklySummaries(
-            WeeklyActivityDTO weeklyActivity
-    ) {
-
-        return weeklyActivity.contributions()
-                .stream()
-                .map(this::generateSummary)
-                .toList();
     }
 }

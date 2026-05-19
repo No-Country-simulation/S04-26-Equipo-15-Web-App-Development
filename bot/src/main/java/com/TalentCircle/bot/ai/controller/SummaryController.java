@@ -25,6 +25,6 @@ public class SummaryController {
             @RequestBody WeeklyActivityDTO weeklyActivity
     ) {
 
-        return summaryService.generateWeeklySummaries(weeklyActivity);
+        return List.of(summaryService.generateSummary(weeklyActivity));
     }
 }
