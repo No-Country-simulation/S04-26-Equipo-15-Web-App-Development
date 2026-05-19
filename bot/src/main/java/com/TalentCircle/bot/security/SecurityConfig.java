@@ -39,7 +39,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/editor/**")
                                                 .hasAnyRole("ADMIN", "EDITOR")
 
-                                                .requestMatchers("/auth/**","/v3/api-docs/**","/swagger-ui/**", "/swagger-ui.html").permitAll()
+                                                .requestMatchers("/auth/**","/v3/api-docs/**","/swagger-ui/**", "/swagger-ui.html", "/api/collector/**").permitAll()
 
                                                 .anyRequest()
                                                 .authenticated())
