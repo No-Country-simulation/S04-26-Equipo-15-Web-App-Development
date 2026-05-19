@@ -1,5 +1,8 @@
 package com.TalentCircle.bot.ai.dto;
 
-public class WeeklyActivityDTO {
+import java.util.List;
 
+public record WeeklyActivityDTO(
+        List<ContributionSummaryDTO> contributions
+) {
 }

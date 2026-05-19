@@ -1,6 +1,8 @@
 package com.TalentCircle.bot.ai.dto;
 
-public class ContributionSummaryDTO {
-    
-
+public record ContributionSummaryDTO(
+        String title,
+        String summary,
+        String originalUrl
+) {
 }
