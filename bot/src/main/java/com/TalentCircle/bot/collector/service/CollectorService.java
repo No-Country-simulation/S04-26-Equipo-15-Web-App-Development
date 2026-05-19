@@ -1,8 +1,60 @@
 package com.TalentCircle.bot.collector.service;
 
+import com.TalentCircle.bot.ai.dto.WeeklyActivityDTO;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class CollectorService {
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    public List<WeeklyActivityDTO> getTopWeeklyResourcesFromReddit(String subreddit) {
+        String url = "https://www.reddit.com/r/" + subreddit + "/top.json?t=week";
+        
+        HttpHeaders headers = new HttpHeaders();
+        // Custom User-Agent is required by Reddit to avoid Too Many Requests (429) errors
+        headers.set("User-Agent", "TalentCircleBot/1.0");
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        
+        List<WeeklyActivityDTO> activities = new ArrayList<>();
+        
+        try {
+            ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
+            JsonNode body = response.getBody();
+            
+            if (body != null && body.has("data") && body.get("data").has("children")) {
+                JsonNode posts = body.get("data").get("children");
+                for (JsonNode postNode : posts) {
+                    JsonNode data = postNode.get("data");
+                    
+                    String title = data.has("title") ? data.get("title").asText() : "";
+                    String postUrl = data.has("url") ? data.get("url").asText() : "";
+                    int score = data.has("score") ? data.get("score").asInt() : 0;
+                    String author = data.has("author") ? data.get("author").asText() : "";
+                    String comm = data.has("subreddit") ? data.get("subreddit").asText() : subreddit;
+                    
+                    // Extraemos el contenido o cuerpo del post (en Reddit se llama 'selftext')
+                    String content = data.has("selftext") ? data.get("selftext").asText() : "";
+                    
+                    WeeklyActivityDTO activity = new WeeklyActivityDTO(
+                            title, postUrl, "Reddit", score, author, comm, content
+                    );
+                    activities.add(activity);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching data from Reddit: " + e.getMessage());
+        }
+        
+        return activities;
+    }
 }
