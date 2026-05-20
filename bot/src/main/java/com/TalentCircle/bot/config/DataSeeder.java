@@ -11,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 //@Configuration
 public class DataSeeder {
 
-    @Bean
+    /*@Bean
     CommandLineRunner initDatabase(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder
@@ -54,5 +54,5 @@ public class DataSeeder {
             ================================
             """);
         };
-    }
+    }*/
 }
