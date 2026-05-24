@@ -59,6 +59,68 @@ public class CollectorService {
     }
 
     // =========================================================================
+    // SCRUM-15: Obtención de posts top con num_comments y manejo de rate limits
+    // =========================================================================
+
+    // Delay inicial en ms entre reintentos por rate limit — se puede sobrescribir en tests con ReflectionTestUtils
+    int scrum15RetryDelayMs = 1000;
+
+    // Obtiene posts más votados de la semana incluyendo num_comments.
+    // Reintenta hasta 3 veces con backoff exponencial si Reddit devuelve 429.
+    public List<WeeklyActivityDTO> getTopWeeklyResourcesWithRateLimitHandling(String subreddit) {
+        String url = "https://www.reddit.com/r/" + subreddit + "/top.json?t=week";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Agent", "TalentCircleBot/1.0");
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        List<WeeklyActivityDTO> activities = new ArrayList<>();
+        int maxRetries = 3;
+        int currentDelay = scrum15RetryDelayMs;
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                ResponseEntity<JsonNode> response = restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
+                JsonNode body = response.getBody();
+
+                if (body != null && body.has("data") && body.get("data").has("children")) {
+                    JsonNode posts = body.get("data").get("children");
+                    for (JsonNode postNode : posts) {
+                        JsonNode data = postNode.get("data");
+
+                        String title       = data.has("title")        ? data.get("title").asText()       : "";
+                        String postUrl     = data.has("url")           ? data.get("url").asText()          : "";
+                        int    score       = data.has("score")         ? data.get("score").asInt()         : 0;
+                        String author      = data.has("author")        ? data.get("author").asText()       : "";
+                        String community   = data.has("subreddit")     ? data.get("subreddit").asText()    : subreddit;
+                        String content     = data.has("selftext")      ? data.get("selftext").asText()     : "";
+                        int    numComments = data.has("num_comments")  ? data.get("num_comments").asInt()  : 0;
+
+                        activities.add(new WeeklyActivityDTO(title, postUrl, "Reddit", score, author, community, content, numComments));
+                    }
+                }
+                break; // petición exitosa, salir del loop de reintentos
+
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                if (e.getStatusCode().value() == 429) {
+                    System.err.println("Rate limit (429). Intento " + attempt + "/" + maxRetries);
+                    if (attempt < maxRetries && currentDelay > 0) {
+                        try { Thread.sleep(currentDelay); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                        currentDelay *= 2;
+                    }
+                } else {
+                    System.err.println("HTTP error " + e.getStatusCode() + ": " + e.getMessage());
+                    break;
+                }
+            } catch (Exception e) {
+                System.err.println("Error fetching Reddit: " + e.getMessage());
+                break;
+            }
+        }
+        return activities;
+    }
+
+    // =========================================================================
     // SCRUM-14: Autenticación OAuth2 con Reddit API
     // Código implementado como parte de SCRUM-14. Conservado como referencia.
     // =========================================================================

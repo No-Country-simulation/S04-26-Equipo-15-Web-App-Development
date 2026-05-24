@@ -21,4 +21,9 @@ public class CollectorController {
     public List<WeeklyActivityDTO> getTopWeeklyReddit(@PathVariable String subreddit) {
         return collectorService.getTopWeeklyResourcesFromReddit(subreddit);
     }
+
+    @GetMapping("/reddit/{subreddit}/v2")
+    public List<WeeklyActivityDTO> getTopWeeklyRedditV2(@PathVariable String subreddit) {
+        return collectorService.getTopWeeklyResourcesWithRateLimitHandling(subreddit);
+    }
 }

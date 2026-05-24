@@ -42,5 +42,25 @@ public class WeeklyActivityDTO {
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+
+    // =========================================================================
+    // SCRUM-15: Campo num_comments — cantidad de comentarios del post de Reddit
+    // =========================================================================
+    private int numComments;
+
+    // Constructor completo con numComments para SCRUM-15
+    public WeeklyActivityDTO(String title, String url, String source, int score, String author, String community, String content, int numComments) {
+        this.title = title;
+        this.url = url;
+        this.source = source;
+        this.score = score;
+        this.author = author;
+        this.community = community;
+        this.content = content;
+        this.numComments = numComments;
+    }
+
+    public int getNumComments() { return numComments; }
+    public void setNumComments(int numComments) { this.numComments = numComments; }
 }
 
