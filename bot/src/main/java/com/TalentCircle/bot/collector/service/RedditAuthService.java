@@ -1,3 +1,11 @@
+// =========================================================================
+// SCRUM-14: Servicio OAuth2 para autenticación con la Reddit API
+// Archivo creado como parte de SCRUM-14. Conservado como referencia.
+// Para activarlo: descomentar el código y agregar las dependencias
+// en CollectorService y application.properties.
+// =========================================================================
+
+/*
 package com.TalentCircle.bot.collector.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -11,53 +19,40 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 
-/**
- * Servicio OAuth2 para autenticación con la Reddit API.
- *
- * Implementa el flujo client_credentials: la aplicación se autentica
- * directamente sin usuario, obteniendo un Bearer token para consultar
- * endpoints protegidos de reddit.com/api/v1.
- *
- * El token se almacena en memoria y se renueva automáticamente al expirar.
- */
 @Service
 public class RedditAuthService {
 
-    /** Endpoint de Reddit para obtener tokens de acceso OAuth2. */
+    // Endpoint de Reddit para obtener tokens de acceso OAuth2
     private static final String TOKEN_URL = "https://www.reddit.com/api/v1/access_token";
 
-    /** Client ID del app registrado en https://www.reddit.com/prefs/apps */
+    // Client ID del app registrado en https://www.reddit.com/prefs/apps
     @Value("${reddit.client-id}")
     private String clientId;
 
-    /** Client Secret del app registrado en Reddit. */
+    // Client Secret del app registrado en Reddit
     @Value("${reddit.client-secret}")
     private String clientSecret;
 
-    /** User-Agent requerido por Reddit para identificar la aplicación. */
+    // User-Agent requerido por Reddit para identificar la aplicación
     @Value("${reddit.user-agent}")
     private String userAgent;
 
-    /** RestTemplate construido desde RestTemplateBuilder para permitir mocking en tests. */
+    // RestTemplate construido desde RestTemplateBuilder para permitir mocking en tests
     private final RestTemplate restTemplate;
 
-    /** Token de acceso almacenado en memoria (se pierde al reiniciar la app). */
+    // Token de acceso almacenado en memoria (se pierde al reiniciar la app)
     private String accessToken;
 
-    /** Marca de tiempo en la que el token expira; inicia en EPOCH para forzar fetch inicial. */
+    // Marca de tiempo en la que el token expira; inicia en EPOCH para forzar fetch inicial
     private Instant tokenExpiresAt = Instant.EPOCH;
 
     public RedditAuthService(RestTemplateBuilder builder) {
         this.restTemplate = builder.build();
     }
 
-    /**
-     * Devuelve un Bearer token válido.
-     *
-     * Si el token en memoria no existe o ya expiró, solicita uno nuevo a Reddit
-     * antes de devolverlo. El método es synchronized para evitar condiciones de
-     * carrera cuando múltiples hilos lo llaman simultáneamente.
-     */
+    // Devuelve un Bearer token válido.
+    // Si el token en memoria no existe o ya expiró, solicita uno nuevo a Reddit.
+    // Synchronized para evitar condiciones de carrera con múltiples hilos.
     public synchronized String getAccessToken() {
         if (accessToken == null || Instant.now().isAfter(tokenExpiresAt)) {
             fetchNewToken();
@@ -65,16 +60,10 @@ public class RedditAuthService {
         return accessToken;
     }
 
-    /**
-     * Solicita un nuevo token a la Reddit API usando el flujo client_credentials.
-     *
-     * - Autenticación: HTTP Basic Auth con clientId:clientSecret (codificado en Base64).
-     * - Cuerpo: grant_type=client_credentials (form-urlencoded).
-     * - Respuesta exitosa: JSON con access_token y expires_in (segundos).
-     *
-     * Se reservan 60 segundos de margen antes de la expiración real para evitar
-     * usar un token que caduque durante una petición en curso.
-     */
+    // Solicita un nuevo token a la Reddit API usando el flujo client_credentials.
+    // - Autenticación: HTTP Basic Auth con clientId:clientSecret (Base64).
+    // - Cuerpo: grant_type=client_credentials (form-urlencoded).
+    // - Se reservan 60 segundos de margen antes de la expiración real.
     private void fetchNewToken() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -100,12 +89,11 @@ public class RedditAuthService {
         tokenExpiresAt = Instant.now().plusSeconds(expiresIn - 60);
     }
 
-    /**
-     * Invalida el token en memoria.
-     * Solo debe usarse en tests para garantizar un estado limpio entre casos.
-     */
+    // Invalida el token en memoria.
+    // Solo debe usarse en tests para garantizar un estado limpio entre casos.
     public void invalidateToken() {
         accessToken = null;
         tokenExpiresAt = Instant.EPOCH;
     }
 }
+*/
