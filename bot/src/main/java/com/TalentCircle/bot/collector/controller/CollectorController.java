@@ -1,6 +1,7 @@
 package com.TalentCircle.bot.collector.controller;
 
 import com.TalentCircle.bot.ai.dto.WeeklyActivityDTO;
+import com.TalentCircle.bot.collector.dto.TopAnsweredQuestionDTO;
 import com.TalentCircle.bot.collector.service.CollectorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,5 +26,11 @@ public class CollectorController {
     @GetMapping("/reddit/{subreddit}/v2")
     public List<WeeklyActivityDTO> getTopWeeklyRedditV2(@PathVariable String subreddit) {
         return collectorService.getTopWeeklyResourcesWithRateLimitHandling(subreddit);
+    }
+
+    // SCRUM-16: Preguntas más respondidas de la semana en un subreddit
+    @GetMapping("/reddit/{subreddit}/questions")
+    public List<TopAnsweredQuestionDTO> getMostAnsweredQuestions(@PathVariable String subreddit) {
+        return collectorService.getMostAnsweredQuestionsOfWeek(subreddit);
     }
 }

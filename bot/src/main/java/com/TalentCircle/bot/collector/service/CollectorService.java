@@ -1,6 +1,7 @@
 package com.TalentCircle.bot.collector.service;
 
 import com.TalentCircle.bot.ai.dto.WeeklyActivityDTO;
+import com.TalentCircle.bot.collector.dto.TopAnsweredQuestionDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -58,12 +60,10 @@ public class CollectorService {
         return activities;
     }
 
-    // =========================================================================
-    // SCRUM-15: Obtención de posts top con num_comments y manejo de rate limits
-    // =========================================================================
+
 
     // Delay inicial en ms entre reintentos por rate limit — se puede sobrescribir en tests con ReflectionTestUtils
-    int scrum15RetryDelayMs = 1000;
+    int RetryDelayMs = 1000;
 
     // Obtiene posts más votados de la semana incluyendo num_comments.
     // Reintenta hasta 3 veces con backoff exponencial si Reddit devuelve 429.
@@ -76,7 +76,7 @@ public class CollectorService {
 
         List<WeeklyActivityDTO> activities = new ArrayList<>();
         int maxRetries = 3;
-        int currentDelay = scrum15RetryDelayMs;
+        int currentDelay = RetryDelayMs;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -120,10 +120,57 @@ public class CollectorService {
         return activities;
     }
 
-    // =========================================================================
-    // SCRUM-14: Autenticación OAuth2 con Reddit API
-    // Código implementado como parte de SCRUM-14. Conservado como referencia.
-    // =========================================================================
+    // Detecta si un post fue eliminado por el usuario o removido por moderadores.
+    private boolean isDeletedOrModerated(JsonNode data) {
+        String author   = data.has("author")   ? data.get("author").asText()   : "";
+        String selftext = data.has("selftext")  ? data.get("selftext").asText() : "";
+        return "[deleted]".equals(author)
+                || "[removed]".equals(selftext)
+                || "[deleted]".equals(selftext);
+    }
+
+    // Retorna las preguntas (posts con "?" en el título) más respondidas de la semana,
+    // ordenadas de mayor a menor número de comentarios.
+    public List<TopAnsweredQuestionDTO> getMostAnsweredQuestionsOfWeek(String subreddit) {
+        String url = "https://www.reddit.com/r/" + subreddit + "/top.json?t=week";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Agent", "TalentCircleBot/1.0");
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        List<TopAnsweredQuestionDTO> questions = new ArrayList<>();
+
+        try {
+            ResponseEntity<JsonNode> response =
+                    restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
+            JsonNode body = response.getBody();
+
+            if (body != null && body.has("data") && body.get("data").has("children")) {
+                for (JsonNode postNode : body.get("data").get("children")) {
+                    JsonNode data = postNode.get("data");
+
+                    String title  = data.has("title")  ? data.get("title").asText()  : "";
+                    String author = data.has("author") ? data.get("author").asText() : "";
+
+                    // Solo posts tipo pregunta y que no estén eliminados o moderados
+                    if (!title.contains("?") || isDeletedOrModerated(data)) {
+                        continue;
+                    }
+
+                    String postUrl    = data.has("url")          ? data.get("url").asText()          : "";
+                    int    numAnswers = data.has("num_comments")  ? data.get("num_comments").asInt()  : 0;
+
+                    questions.add(new TopAnsweredQuestionDTO(title, postUrl, numAnswers, author));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching questions from Reddit: " + e.getMessage());
+        }
+
+        questions.sort(Comparator.comparingInt(TopAnsweredQuestionDTO::getNumAnswers).reversed());
+        return questions;
+    }
+
 
     /*
     private final RedditAuthService redditAuthService;
@@ -132,19 +179,11 @@ public class CollectorService {
         this.redditAuthService = redditAuthService;
     }
 
-    // Obtiene los posts más votados de la semana usando autenticación OAuth2.
-    // Envía un Bearer token y llama al endpoint oficial de Reddit (oauth.reddit.com)
-    // en lugar de la capa JSON pública sin autenticar (www.reddit.com/r/.../.json).
-    //
-    // @param subreddit nombre del subreddit sin prefijo "r/" (ej: "java")
-    // @return lista de actividades semanales; lista vacía si ocurre un error
     public List<WeeklyActivityDTO> getTopWeeklyResourcesOAuth(String subreddit) {
-        // Las peticiones autenticadas deben ir a oauth.reddit.com, no a www.reddit.com
         String url = "https://oauth.reddit.com/r/" + subreddit + "/top?t=week";
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", "TalentCircleBot/1.0");
-        // Bearer token OAuth2: RedditAuthService lo renueva automáticamente al expirar
         headers.setBearerAuth(redditAuthService.getAccessToken());
 
         List<WeeklyActivityDTO> activities = new ArrayList<>();
@@ -164,7 +203,6 @@ public class CollectorService {
                     int    score   = data.has("score")     ? data.get("score").asInt()      : 0;
                     String author  = data.has("author")    ? data.get("author").asText()    : "";
                     String comm    = data.has("subreddit") ? data.get("subreddit").asText() : subreddit;
-                    // selftext es el cuerpo del post; vacío en posts de solo enlace
                     String content = data.has("selftext")  ? data.get("selftext").asText()  : "";
 
                     activities.add(new WeeklyActivityDTO(title, postUrl, "Reddit", score, author, comm, content));
@@ -177,4 +215,5 @@ public class CollectorService {
         return activities;
     }
     */
+
 }

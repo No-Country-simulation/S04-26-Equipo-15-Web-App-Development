@@ -6,6 +6,7 @@
 package com.TalentCircle.bot.collector;
 
 import com.TalentCircle.bot.ai.dto.WeeklyActivityDTO;
+import com.TalentCircle.bot.collector.dto.TopAnsweredQuestionDTO;
 import com.TalentCircle.bot.collector.service.CollectorService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,7 +42,7 @@ class CollectorServiceTest {
         collectorService = new CollectorService();
         // Inyectamos el RestTemplate mockeado y desactivamos el delay para que los tests sean rápidos
         ReflectionTestUtils.setField(collectorService, "restTemplate", mockRestTemplate);
-        ReflectionTestUtils.setField(collectorService, "scrum15RetryDelayMs", 0);
+        ReflectionTestUtils.setField(collectorService, "RetryDelayMs", 0);
     }
 
     @Test
@@ -93,5 +94,68 @@ class CollectorServiceTest {
         assertThat(result).isEmpty();
         // Error genérico no reintenta, solo 1 intento
         verify(mockRestTemplate, times(1)).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class));
+    }
+
+    // =========================================================================
+    // SCRUM-16: Tests para getMostAnsweredQuestionsOfWeek
+    // =========================================================================
+
+    @Test
+    void getMostAnsweredQuestions_debeRetornarSoloPreguntasOrdenadasPorRespuestas() throws Exception {
+        // Hay 3 posts: 2 preguntas y 1 que no es pregunta. Las preguntas deben salir ordenadas desc.
+        String json = "{\"data\":{\"children\":[" +
+                "{\"data\":{\"title\":\"Pregunta A?\",\"url\":\"https://reddit.com/a\",\"author\":\"user1\"," +
+                "\"selftext\":\"\",\"num_comments\":10}}," +
+                "{\"data\":{\"title\":\"Post sin pregunta\",\"url\":\"https://reddit.com/b\",\"author\":\"user2\"," +
+                "\"selftext\":\"\",\"num_comments\":99}}," +
+                "{\"data\":{\"title\":\"Pregunta B?\",\"url\":\"https://reddit.com/c\",\"author\":\"user3\"," +
+                "\"selftext\":\"\",\"num_comments\":50}}" +
+                "]}}";
+        JsonNode mockBody = new ObjectMapper().readTree(json);
+
+        when(mockRestTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class)))
+                .thenReturn(ResponseEntity.ok(mockBody));
+
+        List<TopAnsweredQuestionDTO> result = collectorService.getMostAnsweredQuestionsOfWeek("learnprogramming");
+
+        // Solo las 2 preguntas, la de mayor num_comments primero
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getNumAnswers()).isEqualTo(50);
+        assertThat(result.get(0).getTitle()).isEqualTo("Pregunta B?");
+        assertThat(result.get(1).getNumAnswers()).isEqualTo(10);
+    }
+
+    @Test
+    void getMostAnsweredQuestions_debeExcluirPostsEliminadosYModerados() throws Exception {
+        String json = "{\"data\":{\"children\":[" +
+                "{\"data\":{\"title\":\"Pregunta válida?\",\"url\":\"https://reddit.com/valid\"," +
+                "\"author\":\"realUser\",\"selftext\":\"\",\"num_comments\":30}}," +
+                "{\"data\":{\"title\":\"Pregunta eliminada por usuario?\",\"url\":\"https://reddit.com/del\"," +
+                "\"author\":\"[deleted]\",\"selftext\":\"[deleted]\",\"num_comments\":20}}," +
+                "{\"data\":{\"title\":\"Pregunta removida por moderador?\",\"url\":\"https://reddit.com/rem\"," +
+                "\"author\":\"someUser\",\"selftext\":\"[removed]\",\"num_comments\":15}}" +
+                "]}}";
+        JsonNode mockBody = new ObjectMapper().readTree(json);
+
+        when(mockRestTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class)))
+                .thenReturn(ResponseEntity.ok(mockBody));
+
+        List<TopAnsweredQuestionDTO> result = collectorService.getMostAnsweredQuestionsOfWeek("learnprogramming");
+
+        // Solo la pregunta válida debe pasar el filtro
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTitle()).isEqualTo("Pregunta válida?");
+        assertThat(result.get(0).getAuthor()).isEqualTo("realUser");
+        assertThat(result.get(0).getNumAnswers()).isEqualTo(30);
+    }
+
+    @Test
+    void getMostAnsweredQuestions_conErrorDeRed_debeRetornarListaVacia() {
+        when(mockRestTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(JsonNode.class)))
+                .thenThrow(new RuntimeException("Timeout"));
+
+        List<TopAnsweredQuestionDTO> result = collectorService.getMostAnsweredQuestionsOfWeek("learnprogramming");
+
+        assertThat(result).isEmpty();
     }
 }
