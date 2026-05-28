@@ -4,12 +4,15 @@ import com.TalentCircle.bot.ai.dto.ContributionSummaryDTO;
 import com.TalentCircle.bot.ai.dto.WeeklyActivityDTO;
 import com.TalentCircle.bot.ai.service.SummaryService;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+
 
 @RestController
 @Tag(name= "SummaryController" , description = "Controlador para generar resúmenes de contribuciones")
@@ -17,8 +20,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SummaryController {
 
-    private final SummaryService summaryService;
+    @Autowired
+    private SummaryService summaryService;
 
+    
     @Operation(summary = "Genera resúmenes para una lista de contribuciones semanales")
     @PostMapping("/summaries")
     public List<ContributionSummaryDTO> generateSummaries(
@@ -26,5 +31,10 @@ public class SummaryController {
     ) {
 
         return List.of(summaryService.generateSummary(weeklyActivity));
+    }
+
+    @PostMapping("/rank")
+    public List<ContributionSummaryDTO> rankActivities(@RequestBody List<WeeklyActivityDTO> activities) {
+        return summaryService.rankTopContributions(activities);
     }
 }
