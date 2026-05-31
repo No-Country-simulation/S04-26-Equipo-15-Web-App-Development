@@ -1,8 +1,5 @@
 package com.TalentCircle.bot.draft.service;
 
-<<<<<<< HEAD
-import org.springframework.ai.chat.client.ChatClient;
-=======
 import com.TalentCircle.bot.Entity.Draft;
 import com.TalentCircle.bot.Entity.DraftStatus;
 import com.TalentCircle.bot.Entity.PipelineRun;
@@ -13,7 +10,8 @@ import com.TalentCircle.bot.ai.dto.WeeklyActivityDTO;
 import com.TalentCircle.bot.ai.service.SummaryService;
 import com.TalentCircle.bot.draft.repository.PipelineRunRepository;
 import com.TalentCircle.bot.draft.strategy.DraftGenerationStrategy;
->>>>>>> origin/main
+
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,88 +19,24 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.TalentCircle.bot.draft.dto.DraftRequestDTO;
-import com.TalentCircle.bot.draft.dto.DraftResponseDTO;
-import com.TalentCircle.bot.draft.exceptions.DraftGeneratorException;
 
 @Service
 public class DraftGeneratorService {
 
-<<<<<<< HEAD
-    private final ChatClient chatClient;
-
-    public DraftGeneratorService(
-            ChatClient.Builder chatClientBuilder
-    ) {
-        this.chatClient = chatClientBuilder.build();
-    }
-
-    public DraftResponseDTO generateDraft(
-            DraftRequestDTO request
-    ) {
-
-        String summariesText = request.summaries()
-                .stream()
-                .map(summary -> """
-                        Title: %s
-                        Summary: %s
-                        Link: %s
-                        """
-                        .formatted(
-                                summary.title(),
-                                summary.summary(),
-                                summary.url()
-                        )
-                )
-                .reduce("", String::concat);
-
-        String prompt = """
-                Generate a professional editorial-style newsletter draft.
-
-                Requirements:
-                - Between 400 and 600 words
-                - Include:
-                  1. Introduction
-                  2. One section per contribution
-                  3. Closing section
-                - Include original links
-                - Tone: editorial, professional, concise
-
-                Contributions:
-                %s
-                """
-                .formatted(summariesText);
-
-        try {
-
-            String response = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
-
-            return new DraftResponseDTO(response);
-
-        } catch (Exception e) {
-
-            throw new DraftGeneratorException(
-                    "Failed to generate newsletter draft"
-            );
-        }
-    }
-}
-=======
     private final SummaryService summaryService;
+    private final ChatClient chatClient;
     private final PipelineRunRepository pipelineRunRepository;
     private final DraftRepository draftRepository;
     private final List<DraftGenerationStrategy> strategies;
 
-    // Inyección de dependencias por constructor
     public DraftGeneratorService(
             SummaryService summaryService,
+            ChatClient chatClient,
             PipelineRunRepository pipelineRunRepository,
             DraftRepository draftRepository,
             List<DraftGenerationStrategy> strategies) {
         this.summaryService = summaryService;
+        this.chatClient = chatClient;
         this.pipelineRunRepository = pipelineRunRepository;
         this.draftRepository = draftRepository;
         this.strategies = strategies;
@@ -167,5 +101,5 @@ public class DraftGeneratorService {
 
         return generatedDrafts;
     }
+
 }
->>>>>>> origin/main
